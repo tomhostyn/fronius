@@ -38,7 +38,7 @@ class FroniusInverter:
             warnings.warn("using api version newer than last tested (" + FroniusInverter.tested_server_version + "): " +
                           api_vers['CompatibilityRange'])
 
-        return "http://" + self.host + self.api_version
+        return "http://" + self.host + api_vers['BaseURL']
 
     def check_server_version(self):
         pass
