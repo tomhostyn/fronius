@@ -4,6 +4,8 @@ from fronius import FroniusInverter
 from fronius import FroniusArchiveJson
 import dateutil
 
+
+
 #
 # Tests for FroniusArchiveJson class
 #
@@ -165,6 +167,15 @@ class FroniusArchiveJsonTests(unittest.TestCase):
     def test_data_with_error(self):
         faj = FroniusArchiveJson(error_json)
         self.assertEqual(faj.data(), {})
+
+class FroniusInverternUnitTests(unittest.TestCase):
+    def test_class_get_channels(self):
+        self.assertEqual(len(FroniusInverter.get_all_channels()), 24)
+
+class FroniusInverternConnectionTests(unittest.TestCase):
+    def test_class_get_channels(self):
+        self.assertEqual(len(FroniusInverter.get_all_channels()), 24)
+
 
 if __name__ == '__main__':
     unittest.main()

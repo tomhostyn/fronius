@@ -1,60 +1,46 @@
-import requests
-import warnings
-import datetime
-import dateutil
-import pandas as pd
-
-
 class FroniusInverter:
-    'class implementing Fronius Solar API v1'
-
+    'class implementig Fronius Solar API v1'
     tested_server_version = "1.5-4"
-    api_version = 1
 
-    channel_dict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
-                       "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
-                       "Voltage_DC_String_1": "1V", "Voltage_DC_String_2": "1V", "Temperature_Powerstage": "1C",
-                       "Voltage_AC_Phase_1": "1V", "Voltage_AC_Phase_2": "1V", "Voltage_AC_Phase_3": "1V",
-                       "Current_AC_Phase_1": "1A", "Current_AC_Phase_2": "1A", "Current_AC_Phase_3": "1A",
-                    "PowerReal_PAC_Sum": "1W", "EnergyReal_WAC_Minus_Absolute": "1Wh",
-                    "EnergyReal_WAC_Plus_Absolute": "1Wh", "Meter_Location_Current": "1",
-                    "Temperature_Channel_1": "1", "Temperature_Channel_2": "1", "Digital_Channel_1": "1",
-                    "Digital_Channel_2": "1", "Radiation": "1", "Hybrid_Operating_State": "1"}
+    channelUnitDict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
+        "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
+        "Voltage_DC_String_1": "1V", "Voltage_DC_String_2": "1V", "Temperature_Powerstage": "1C",
+        "Voltage_AC_Phase_1": "1V", "Voltage_AC_Phase_2": "1V", "Voltage_AC_Phase_3": "1V", "Current_AC_Phase_1": "1A",
+        "Current_AC_Phase_2": "1A", "Current_AC_Phase_3": "1A", "PowerReal_PAC_Sum": "1W",
+        "EnergyReal_WAC_Minus_Absolute": "1Wh", "EnergyReal_WAC_Plus_Absolute": "1Wh", "Meter_Location_Current": "1",
+        "Temperature_Channel_1": "1", "Temperature_Channel_2": "1", "Digital_Channel_1": "1", "Digital_Channel_2": "1",
+        "Radiation": "1", "Digital_PowerManagementRelay_Out_1": "1", "Hybrid_Operating_State": "1"}
 
-    max_query_time = datetime.timedelta(
+    maxQueryTime = datetime.timedelta(
         days=16)  # the inverter will return an error when asking for more than 16 days of data
 
     def __init__(self, host):
         self.host = host
-        self.base_url = self.init_base_url()
+        self.baseURL = self.getBaseURL()
 
-    def init_base_url(self):
+    def getBaseURL(self):
         url = "http://" + self.host + "/solar_api/GetAPIVersion.cgi"
         r = requests.get(url)
-        api_vers = r.json()
-        assert isinstance(api_vers, dict)
-        assert (api_vers['APIVersion'] == self.api_version)
-        if api_vers['CompatibilityRange'] != FroniusInverter.tested_server_version:
+        api_version = r.json()
+
+        assert (api_version['APIVersion'] == 1)
+        if (api_version['CompatibilityRange'] != FroniusInverter.tested_server_version):
             warnings.warn("using api version newer than last tested (" + FroniusInverter.tested_server_version + "): " +
-                          api_vers['CompatibilityRange'])
+                          api_version['CompatibilityRange'])
 
-        return "http://" + self.host + self.api_version
-
-    def check_server_version(self):
-        pass
-
+        return "http://" + self.host + api_version['BaseURL']
 
     @classmethod
-    def get_all_channels(cls):
-        return list(cls.get_all_channel_dict().keys())
+    def getChannels(cls):
+        return list(cls.getChannelUnitDict().keys())
 
     @classmethod
-    def get_all_channel_dict(cls):
-        return cls.channel_dict
+    def getChannelUnitDict(cls):
+        return cls.channelUnitDict
 
     def getInverterRealTimeData(self):
         payload = {"Scope": "System"}
-        url = self.base_url + "GetInverterRealtimeData.cgi"
+        url = self.baseURL + "GetInverterRealtimeData.cgi"
         print(url)
         r = requests.get(url, params=payload)
         return r.json()
@@ -64,25 +50,25 @@ class FroniusInverter:
         returndf = None
         error = 0
         while ((fromDate < toDate) and (error == 0)):
-            to = min(toDate, fromDate + self.max_query_time - datetime.timedelta(seconds=1))
+            to = min(toDate, fromDate + self.maxQueryTime - datetime.timedelta(seconds=1))
             jsondata = self.getHistoricalDataJson(fromDate, to, channels)
-            fromDate += self.max_query_time
+            fromDate += self.maxQueryTime
 
             faj = FroniusArchiveJson(jsondata)
-            error = faj.error_code()
-            if (faj.error_code() != 0):
-                warnings.warn(str(faj.error_status()))
+            error = faj.errorCode()
+            if (faj.errorCode() != 0):
+                warnings.warn(str(faj.errorStatus()))
             else:
-                if (not faj.is_empty()):
+                if (not faj.isEmpty()):
                     df = faj.data()
                     if (returndf is None):
                         returndf = df
                     else:
-                        # merge the dictionaries for different device_ids
+                        # merge the dictionaries for different deviceIDs
                         for key, value in df.items():
                             if key in returndf:
                                 returndf[key] = pd.concat([returndf[key], value])
-                                returndf[key] = returndf[key].sort_values(FroniusArchiveJson.timestamp_colname())
+                                returndf[key] = returndf[key].sort_values(FroniusArchiveJson.timestampColname())
                             else:
                                 returndf[key] = value
         return returndf
@@ -90,10 +76,10 @@ class FroniusInverter:
     def getHistoricalDataJson(self, fromDate, toDate, channels=None):
 
         if (channels == None):
-            channels = self.get_all_channels()
+            channels = self.getChannels()
 
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate, "Channel": channels}
-        url = self.base_url + "GetArchiveData.cgi"
+        url = self.baseURL + "GetArchiveData.cgi"
         print(url, str(fromDate), "->", str(toDate))
         r = requests.get(url, params=payload)
         return r.json()
@@ -101,7 +87,7 @@ class FroniusInverter:
     def getHistoricalEventsJson(self, fromDate, toDate):
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate,
                    "Channel": ["InverterEvents", "InverterErrors"]}
-        url = self.base_url + "GetArchiveData.cgi"
+        url = self.baseURL + "GetArchiveData.cgi"
         print(url, str(fromDate), "->", str(toDate))
         r = requests.get(url, params=payload)
         return r.json()
@@ -134,7 +120,6 @@ class FroniusInverter:
 
         step = datetime.timedelta(days=14)
         found = False
-        result = None
         while (not found and (fromDate < toDate)):
             result = self.getHistoricalDataJson(fromDate, fromDate + step, [channel])
             if (1 == len(result["Body"]["Data"])):
@@ -172,7 +157,7 @@ class FroniusInverter:
         if (0 == len(result["Body"]["Data"])):
             # no data was found in this interval
             # search the data later than the test time + scope
-            return (self.findEarliestDataBinary(testTime + sampleScope, toDate, sampleScope, stopScope))
+            return (self.findEarliestData(testTime + sampleScope, toDate, sampleScope, stopScope))
         else:
             # data was found.
             print("earliest data at : ", self._getStartOfEvents(result))
@@ -181,58 +166,53 @@ class FroniusInverter:
                 return self._getStartOfEvents(result)
             else:
                 # look for earlier data
-                return (self.findEarliestDataBinary(fromDate, testTime + sampleScope, sampleScope, stopScope))
+                return (self.findEarliestData(fromDate, testTime + sampleScope, sampleScope, stopScope))
 
 
 class FroniusArchiveJson:
     def __init__(self, json):
-        assert isinstance(json, dict)
-        assert ('Body' in json)
-        assert isinstance(json["Body"], dict)
-        assert ('Head' in json)
-        assert isinstance(json["Head"], dict)
         self.json = json
 
-    def device_ids(self):
+    def deviceIDs(self):
         return list(self.json["Body"]["Data"].keys())
 
     def channels(self, deviceID=None):
         if (deviceID == None):
-            deviceID = self.device_ids()[0]
+            deviceID = self.deviceIDs()[0]
         return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
-    def start_date(self):
+    def startDate(self):
         return dateutil.parser.parse(self.json["Head"]["RequestArguments"]["StartDate"])
 
-    def end_date(self):
+    def endDate(self):
         return dateutil.parser.parse(self.json["Head"]["RequestArguments"]["EndDate"])
 
     def timestamp(self):
         return dateutil.parser.parse(self.json["Head"]["Timestamp"])
 
-    def is_empty(self):
+    def isEmpty(self):
         return len(self.json["Body"]["Data"]) == 0
 
-    def error_code(self):
+    def errorCode(self):
         return int(self.json["Head"]["Status"]["Code"])
 
-    def error_status(self):
+    def errorStatus(self):
         return (self.json["Head"]["Status"])
 
     @classmethod
-    def timestamp_colname(cls):
+    def timestampColname(cls):
         return "ts"
 
     def data(self):
         result = {}
-        timestampCol = self.timestamp_colname()
-        for deviceID in self.device_ids():
+        timestampCol = self.timestampColname()
+        for deviceID in self.deviceIDs():
             deviceDf = None
             channels = self.channels(deviceID)
             for channel in channels:
                 my_dict = self.json["Body"]["Data"][deviceID]["Data"][channel]["Values"]
 
-                start = self.start_date()
+                start = self.startDate()
                 offsets = pd.Series(list(my_dict.keys()))
                 timestamps = offsets.map(lambda x: datetime.timedelta(seconds=int(x)) + start)
 
@@ -251,3 +231,4 @@ class FroniusArchiveJson:
             result[deviceID] = deviceDf
 
         return result
+
