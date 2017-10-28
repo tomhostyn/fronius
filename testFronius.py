@@ -4,11 +4,10 @@ from fronius import FroniusInverter
 from fronius import FroniusArchiveJson
 import dateutil
 
-
-
 #
-# Tests for FroniusArchiveJson class
+# fast unit tests that don't need to connect to the network
 #
+
 error_json = {'Body': {'Data': {}},
  'Head': {'RequestArguments': {'Channel': 'Hybrid_Operating_State',
    'EndDate': '2017-10-29T23:59:59+01:00',
@@ -72,8 +71,6 @@ regular_json = {'Body': {'Data': {'datamanager:/dc/f0056cc6/': {'Data': {'Digita
    'Reason': '',
    'UserMessage': ''},
   'Timestamp': '2017-10-25T09:17:20+02:00'}}
-
-
 
 class FroniusArchiveJsonTests(unittest.TestCase):
     def test_constructor_cannot_accept_string(self):
@@ -169,10 +166,6 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertEqual(faj.data(), {})
 
 class FroniusInverternUnitTests(unittest.TestCase):
-    def test_class_get_channels(self):
-        self.assertEqual(len(FroniusInverter.get_all_channels()), 24)
-
-class FroniusInverternConnectionTests(unittest.TestCase):
     def test_class_get_channels(self):
         self.assertEqual(len(FroniusInverter.get_all_channels()), 24)
 
