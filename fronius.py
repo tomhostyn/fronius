@@ -12,37 +12,38 @@ class FroniusInverter:
     api_version = 1
 
     channel_dict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
-                       "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
-                       "Voltage_DC_String_1": "1V", "Voltage_DC_String_2": "1V", "Temperature_Powerstage": "1C",
-                       "Voltage_AC_Phase_1": "1V", "Voltage_AC_Phase_2": "1V", "Voltage_AC_Phase_3": "1V",
-                       "Current_AC_Phase_1": "1A", "Current_AC_Phase_2": "1A", "Current_AC_Phase_3": "1A",
+                    "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
+                    "Voltage_DC_String_1": "1V", "Voltage_DC_String_2": "1V", "Temperature_Powerstage": "1C",
+                    "Voltage_AC_Phase_1": "1V", "Voltage_AC_Phase_2": "1V", "Voltage_AC_Phase_3": "1V",
+                    "Current_AC_Phase_1": "1A", "Current_AC_Phase_2": "1A", "Current_AC_Phase_3": "1A",
                     "PowerReal_PAC_Sum": "1W", "EnergyReal_WAC_Minus_Absolute": "1Wh",
-                    "EnergyReal_WAC_Plus_Absolute": "1Wh", "Meter_Location_Current": "1",
-                    "Temperature_Channel_1": "1", "Temperature_Channel_2": "1", "Digital_Channel_1": "1",
-                    "Digital_Channel_2": "1", "Radiation": "1", "Hybrid_Operating_State": "1"}
+                    "EnergyReal_WAC_Plus_Absolute": "1Wh", "Meter_Location_Current": "1", "Temperature_Channel_1": "1",
+                    "Temperature_Channel_2": "1", "Digital_Channel_1": "1", "Digital_Channel_2": "1", "Radiation": "1",
+                    "Hybrid_Operating_State": "1"}
 
     max_query_time = datetime.timedelta(
         days=16)  # the inverter will return an error when asking for more than 16 days of data
 
     def __init__(self, host):
         self.host = host
-        self.base_url = self.init_base_url()
+        self.base_url = "http://" + host + "/solar_api/v" + str(self.api_version) + "/"
 
-    def init_base_url(self):
+    def check_server_compatibility(self):
         url = "http://" + self.host + "/solar_api/GetAPIVersion.cgi"
         r = requests.get(url)
         api_vers = r.json()
+        compatible = True
         assert isinstance(api_vers, dict)
-        assert (api_vers['APIVersion'] == self.api_version)
+        if (api_vers['APIVersion'] != self.api_version):
+            warnings.warn(
+                "using api version newer than last tested (" + self.api_version + "): " + api_vers['APIVersion'])
+            compatible = False
         if api_vers['CompatibilityRange'] != FroniusInverter.tested_server_version:
-            warnings.warn("using api version newer than last tested (" + FroniusInverter.tested_server_version + "): " +
-                          api_vers['CompatibilityRange'])
-
-        return "http://" + self.host + api_vers['BaseURL']
-
-    def check_server_version(self):
-        pass
-
+            warnings.warn(
+                "using api compatibility range newer than last tested (" + FroniusInverter.tested_server_version + "): " + api_vers[
+                    'CompatibilityRange'])
+            compatible = False
+        return compatible, api_vers
 
     @classmethod
     def get_all_channels(cls):
