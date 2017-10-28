@@ -36,6 +36,11 @@ class FroniusInverter_positive(unittest.TestCase):
         self.assertTrue(compatible)
         self.assertTrue(type(response), dict)
 
+    def test_realtime_data(self):
+        fi = FroniusInverter(inverter_ip)
+        rtd = fi.getInverterRealTimeData()
+        self.assertTrue(type(rtd), dict)
+
 
 
 skip_timeout_tests = os.getenv('SKIP_TIMEOUT_TESTS', False)
