@@ -8,7 +8,7 @@ import pandas as pd
 class FroniusInverter:
     'class implementing Fronius Solar API v1'
 
-    tested_server_version = "1.5-4"
+    tested_server_versions = ["1.5-4"]
     api_version = 1
 
     channel_dict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
@@ -38,9 +38,9 @@ class FroniusInverter:
             warnings.warn(
                 "using api version newer than last tested (" + self.api_version + "): " + api_vers['APIVersion'])
             compatible = False
-        if api_vers['CompatibilityRange'] != FroniusInverter.tested_server_version:
+        if not api_vers['CompatibilityRange'] in FroniusInverter.tested_server_versions:
             warnings.warn(
-                "using api compatibility range newer than last tested (" + FroniusInverter.tested_server_version + "): " + api_vers[
+                "using api compatibility range newer than last tested (" + FroniusInverter.tested_server_versions + "): " + api_vers[
                     'CompatibilityRange'])
             compatible = False
         return compatible, api_vers
