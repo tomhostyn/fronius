@@ -56,7 +56,7 @@ class FroniusInverter:
     def getInverterRealTimeData(self):
         payload = {"Scope": "System"}
         url = self.base_url + "GetInverterRealtimeData.cgi"
-        print(url)
+#        print(url)
         r = requests.get(url, params=payload)
         return r.json()
 
@@ -184,8 +184,7 @@ class FroniusInverter:
                 # look for earlier data
                 return (self.findEarliestDataBinary(fromDate, testTime + sampleScope, sampleScope, stopScope))
 
-
-class FroniusArchiveJson:
+class FroniusJson:
     def __init__(self, json):
         assert isinstance(json, dict)
         assert ('Body' in json)
@@ -193,14 +192,6 @@ class FroniusArchiveJson:
         assert ('Head' in json)
         assert isinstance(json["Head"], dict)
         self.json = json
-
-    def device_ids(self):
-        return list(self.json["Body"]["Data"].keys())
-
-    def channels(self, deviceID=None):
-        if (deviceID == None):
-            deviceID = self.device_ids()[0]
-        return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
     def start_date(self):
         return dateutil.parser.parse(self.json["Head"]["RequestArguments"]["StartDate"])
@@ -211,14 +202,24 @@ class FroniusArchiveJson:
     def timestamp(self):
         return dateutil.parser.parse(self.json["Head"]["Timestamp"])
 
-    def is_empty(self):
-        return len(self.json["Body"]["Data"]) == 0
-
     def error_code(self):
         return int(self.json["Head"]["Status"]["Code"])
 
     def error_status(self):
         return (self.json["Head"]["Status"])
+
+
+class FroniusArchiveJson(FroniusJson):
+    def device_ids(self):
+        return list(self.json["Body"]["Data"].keys())
+
+    def channels(self, deviceID=None):
+        if (deviceID == None):
+            deviceID = self.device_ids()[0]
+        return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
+
+    def is_empty(self):
+        return len(self.json["Body"]["Data"]) == 0
 
     @classmethod
     def timestamp_colname(cls):
