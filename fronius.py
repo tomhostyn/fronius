@@ -148,7 +148,7 @@ class FroniusInverter:
             return None
 
     def findEarliestDataBinary(self, fromDate=None, toDate=None, sampleScope=None, stopScope=None):
-        warnings.warning(
+        warnings.warn(
             "sometimes the fronius device returns values outside of the requested interval. this screws up the binary search.  check later")
         epoch = datetime.datetime(2017, 1, 1)
         channel = "TimeSpanInSec"
@@ -241,7 +241,7 @@ class FroniusArchiveJson(FroniusJson):
 # FIXME: this name has no place here.
     @classmethod
     def timestamp_colname(cls):
-        warning ("class method FroniusArchiveJson::timestamp_colname depricated")
+        warnings.warn("class method FroniusArchiveJson::timestamp_colname depricated")
         return "ts"
 
     def data(self, timestamp_colname = "ts"):
