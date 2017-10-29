@@ -53,7 +53,7 @@ class FroniusInverter:
     def get_all_channel_dict(cls):
         return cls.channel_dict
 
-    def get_inverter_realTime_data(self):
+    def get_inverter_realtime_data(self):
         payload = {"Scope": "System"}
         url = self.base_url + "GetInverterRealtimeData.cgi"
 #        print(url)
