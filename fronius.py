@@ -219,7 +219,7 @@ class FroniusRealTimeJson(FroniusJson):
             data = self.json["Body"]["Data"]
             assert ('YEAR_ENERGY' in (data.keys()))
 
-    def data(self, timestamp_colname = "ts"):
+    def data(self, timestamp_colname = "ts", append=None):
         series = [pd.Series([self.timestamp()], name=timestamp_colname)]
         for key, value in self.json['Body']['Data'].items():
             v = value['Values']['1']
@@ -227,6 +227,9 @@ class FroniusRealTimeJson(FroniusJson):
             series += [s]
 
         result = pd.concat(series, axis=1)
+
+        if append is not None:
+            result = pd.merge(append, result, how='outer')
         return result
 
 class FroniusArchiveJson(FroniusJson):
