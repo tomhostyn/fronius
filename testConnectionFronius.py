@@ -1,9 +1,9 @@
 import unittest
-import json
-import requests
 from fronius import FroniusInverter
 from fronius import FroniusArchiveJson
-import testFronius
+from fronius import FroniusJson
+from fronius import FroniusRealTimeJson
+import pandas
 import os
 
 
@@ -34,12 +34,47 @@ class FroniusInverter_positive(unittest.TestCase):
         fi = FroniusInverter(inverter_ip)
         compatible, response = fi.check_server_compatibility()
         self.assertTrue(compatible)
-        self.assertTrue(type(response), dict)
+        self.assertEqual(type(response), dict)
 
     def test_realtime_data(self):
         fi = FroniusInverter(inverter_ip)
         rtd = fi.getInverterRealTimeData()
-        self.assertTrue(type(rtd), dict)
+        self.assertEqual(type(rtd), dict)
+
+class FroniusInverter_RT_positive(unittest.TestCase):
+    def test_getRealtimeData(self):
+        fi = FroniusInverter(inverter_ip)
+        json = fi.getInverterRealTimeData()
+        frt = FroniusRealTimeJson(json)
+        rtd = frt.data()
+        self.assertEqual(type(rtd), pandas.core.frame.DataFrame)
+        self.assertEqual(len(rtd), 1)
+
+    def FroniusInverter_RT_rename_timestamp(self):
+        fi = FroniusInverter(inverter_ip)
+        json = fi.getInverterRealTimeData()
+        frt = FroniusRealTimeJson(json)
+        label = "foo"
+        rtd = frt.data(label)
+        self.assertEqual(type(rtd), pandas.core.frame.DataFrame)
+        self.assertEqual(len(rtd), 1)
+        self.assertTrue(label in list(rtd))
+
+    def FroniusInverter_RT_test_append(self):
+        fi = FroniusInverter(inverter_ip)
+        json = fi.getInverterRealTimeData()
+        frt = FroniusRealTimeJson(json)
+        rtd = frt.data()
+        # get 2nd observation
+        json = fi.getInverterRealTimeData()
+        frt = FroniusRealTimeJson(json)
+        rtd2 = frt.data('ts', append=rtd)
+
+        self.assertEqual(type(rtd2), pandas.core.frame.DataFrame)
+        self.assertEqual(len(rtd2), 2)
+        self.assertEqual(len(list(set(rtd2['ts']))), 2)
+
+
 
 
 
