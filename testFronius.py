@@ -1,7 +1,10 @@
 import unittest
-import fronius
 from fronius import FroniusInverter
 from fronius import FroniusArchiveJson
+from fronius import FroniusJson
+from fronius import FroniusRealTimeJson
+import fronius
+
 import dateutil
 
 #
@@ -21,15 +24,7 @@ error_json = {'Body': {'Data': {}},
    'UserMessage': ''},
   'Timestamp': '2017-10-24T10:29:59+02:00'}}
 
-realtime_json={'Body': {'Data': {'DAY_ENERGY': {'Unit': 'Wh', 'Values': {'1': 57}},
-   'PAC': {'Unit': 'W', 'Values': {'1': 183}},
-   'TOTAL_ENERGY': {'Unit': 'Wh', 'Values': {'1': 163543}},
-   'YEAR_ENERGY': {'Unit': 'Wh', 'Values': {'1': 163542}}}},
- 'Head': {'RequestArguments': {'DeviceClass': 'Inverter', 'Scope': 'System'},
-  'Status': {'Code': 0, 'Reason': '', 'UserMessage': ''},
-  'Timestamp': '2017-10-25T09:10:14+02:00'}}
-
-regular_json = {'Body': {'Data': {'datamanager:/dc/f0056cc6/': {'Data': {'Digital_PowerManagementRelay_Out_1': {'Unit': '1',
+archive_json = {'Body': {'Data': {'datamanager:/dc/f0056cc6/': {'Data': {'Digital_PowerManagementRelay_Out_1': {'Unit': '1',
       'Values': {'28469': 0},
       '_comment': 'channelId=123407124'}},
     'End': '2017-10-25T23:59:59+02:00',
@@ -60,7 +55,7 @@ regular_json = {'Body': {'Data': {'datamanager:/dc/f0056cc6/': {'Data': {'Digita
     'End': '2017-10-25T23:59:59+02:00',
     'NodeType': 97,
     'Start': '2017-10-25T00:00:00+02:00'}}},
- 'Head': {'RequestArguments': {'Channel': 'TimeSpanInSec',
+                'Head': {'RequestArguments': {'Channel': 'TimeSpanInSec',
    'EndDate': '2017-10-25T23:59:59+02:00',
    'HumanReadable': 'True',
    'Scope': 'System',
@@ -71,6 +66,90 @@ regular_json = {'Body': {'Data': {'datamanager:/dc/f0056cc6/': {'Data': {'Digita
    'Reason': '',
    'UserMessage': ''},
   'Timestamp': '2017-10-25T09:17:20+02:00'}}
+
+realtime_json = {'Body': {'Data': {'DAY_ENERGY': {'Unit': 'Wh', 'Values': {'1': 4510}},
+   'PAC': {'Unit': 'W', 'Values': {'1': 548}},
+   'TOTAL_ENERGY': {'Unit': 'Wh', 'Values': {'1': 192963}},
+   'YEAR_ENERGY': {'Unit': 'Wh', 'Values': {'1': 192963}}}},
+ 'Head': {'RequestArguments': {'DeviceClass': 'Inverter', 'Scope': 'System'},
+  'Status': {'Code': 0, 'Reason': '', 'UserMessage': ''},
+  'Timestamp': '2017-10-28T15:44:32+02:00'}}
+
+realtime_error_json = {'Body': {'Data': {}},
+ 'Head': {'RequestArguments': {'DeviceClass': 'Inverter', 'Scope': 'System'},
+  'Status': {'Code': 255, 'Reason': 'undefined', 'UserMessage': 'undefined'},
+  'Timestamp': '2017-10-28T15:45:32+02:00'}}
+
+class FroniusJsonTests(unittest.TestCase):
+    def test_constructor_cannot_accept_string(self):
+        with self.assertRaises(AssertionError):
+            FroniusJson("not a json object")
+
+    def test_constructor_cannot_accept_empty_dict(self):
+        with self.assertRaises(AssertionError):
+            FroniusJson(dict())
+
+    def test_is_empty_with_empty(self):
+        faj=FroniusJson(error_json)
+        self.assertTrue(self, faj.is_empty())
+
+    def test_is_empty_with_empty(self):
+        faj=FroniusJson(realtime_error_json)
+        self.assertTrue(self, faj.is_empty())
+
+    def test_is_not_empty_with_not_empty(self):
+        faj = FroniusJson(archive_json)
+        self.assertTrue(self, faj.is_empty())
+
+    def test_is_not_empty_with_not_empty(self):
+        faj = FroniusJson(realtime_json)
+        self.assertTrue(self, faj.is_empty())
+
+class FroniusRealTimeJsonTests(unittest.TestCase):
+
+    def test_constructor_cannot_accept_Archive_Json(self):
+        with self.assertRaises(AssertionError):
+            FroniusRealTimeJson(archive_json)
+
+    def test_constructor_can_accept_error_response(self):
+        FroniusRealTimeJson(realtime_error_json)
+
+    def test_constructor_can_accept_regular_realtime_response(self):
+        FroniusRealTimeJson(realtime_json)
+
+    def test_is_empty_with_empty(self):
+        faj=FroniusRealTimeJson(realtime_error_json)
+        self.assertTrue(self, faj.is_empty())
+
+    def test_is_not_empty_with_not_empty(self):
+        faj = FroniusRealTimeJson(realtime_json)
+        self.assertTrue(self, faj.is_empty())
+
+    def test_timestamp_with_regular(self):
+        faj = FroniusRealTimeJson(realtime_json)
+        dt = dateutil.parser.parse('2017-10-28T15:44:32+02:00')
+        self.assertEqual(dt, faj.timestamp())
+
+    def test_timestamp_with_error(self):
+        faj = FroniusRealTimeJson(realtime_error_json)
+        dt = dateutil.parser.parse('2017-10-28T15:45:32+02:00')
+        self.assertEqual(dt, faj.timestamp())
+
+    def test_errorStatus_with_regular(self):
+        faj = FroniusRealTimeJson(realtime_json)
+        self.assertTrue(type(faj.error_status()), str)
+
+    def test_errorStatus_with_error(self):
+        faj = FroniusRealTimeJson(realtime_error_json)
+        self.assertTrue(type(faj.error_status()), str)
+
+    def test_error_code_with_regular(self):
+        faj = FroniusRealTimeJson(realtime_json)
+        self.assertEqual(faj.error_code(), 0)
+
+    def test_error_code_with_error(self):
+        faj = FroniusRealTimeJson(realtime_error_json)
+        self.assertEqual(faj.error_code(), 255)
 
 class FroniusArchiveJsonTests(unittest.TestCase):
     def test_constructor_cannot_accept_string(self):
@@ -85,18 +164,18 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         FroniusArchiveJson(error_json)
 
     def test_constructor_can_accept_regular_response(self):
-        FroniusArchiveJson(regular_json)
+        FroniusArchiveJson(archive_json)
 
     def test_is_empty_with_empty(self):
         faj=FroniusArchiveJson(error_json)
         self.assertTrue(self, faj.is_empty())
 
     def test_is_not_empty_with_not_empty(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         self.assertTrue(self, faj.is_empty())
 
     def test_device_ids_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         self.assertNotEqual(0, len(faj.device_ids()))
 
     def test_device_ids_with_error(self):
@@ -104,11 +183,11 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertEqual(0, len(faj.device_ids()))
 
     def test_channels_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         self.assertNotEqual(0, len(faj.channels()))
 
     def test_start_date_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         dt = dateutil.parser.parse('2017-10-25T00:00:00+02:00')
         self.assertEqual(dt, faj.start_date())
 
@@ -118,7 +197,7 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertEqual(dt, faj.start_date())
 
     def test_end_date_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         dt = dateutil.parser.parse('2017-10-25T23:59:59+02:00')
         self.assertEqual(dt, faj.end_date())
 
@@ -128,7 +207,7 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertEqual(dt, faj.end_date())
 
     def test_timestamp_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         dt = dateutil.parser.parse('2017-10-25T09:17:20+02:00')
         self.assertEqual(dt, faj.timestamp())
 
@@ -138,7 +217,7 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertEqual(dt, faj.timestamp())
 
     def test_errorStatus_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         self.assertTrue(type(faj.error_status()), str)
 
     def test_errorStatus_with_error(self):
@@ -146,7 +225,7 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertTrue(type(faj.error_status()), str)
 
     def test_error_code_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         self.assertEqual(faj.error_code(), 0)
 
     def test_error_code_with_error(self):
@@ -154,7 +233,7 @@ class FroniusArchiveJsonTests(unittest.TestCase):
         self.assertEqual(faj.error_code(), 255)
 
     def test_data_with_regular(self):
-        faj = FroniusArchiveJson(regular_json)
+        faj = FroniusArchiveJson(archive_json)
         self.assertEqual(len(faj.data()), 2)
         self.assertEqual((faj.device_ids()), ['datamanager:/dc/f0056cc6/', 'inverter/1'])
         self.assertEqual((faj.channels('datamanager:/dc/f0056cc6/')), ['Digital_PowerManagementRelay_Out_1'])

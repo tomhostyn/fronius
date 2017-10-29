@@ -208,6 +208,26 @@ class FroniusJson:
     def error_status(self):
         return (self.json["Head"]["Status"])
 
+    def is_empty(self):
+        return len(self.json["Body"]["Data"]) == 0
+
+
+class FroniusRealTimeJson(FroniusJson):
+    def __init__(self, json):
+        super().__init__(json)
+        if (self.error_code() == 0):
+            data = self.json["Body"]["Data"]
+            assert ('YEAR_ENERGY' in (data.keys()))
+
+    def data(self, timestamp_colname = "ts"):
+        series = [pd.Series([self.timestamp()], name=timestamp_colname)]
+        for key, value in self.json['Body']['Data'].items():
+            v = value['Values']['1']
+            s = pd.Series([v], name=key)
+            series += [s]
+
+        result = pd.concat(series, axis=1)
+        return result
 
 class FroniusArchiveJson(FroniusJson):
     def device_ids(self):
@@ -218,16 +238,14 @@ class FroniusArchiveJson(FroniusJson):
             deviceID = self.device_ids()[0]
         return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
-    def is_empty(self):
-        return len(self.json["Body"]["Data"]) == 0
-
+# FIXME: this name has no place here.
     @classmethod
     def timestamp_colname(cls):
+        warning ("class method FroniusArchiveJson::timestamp_colname depricated")
         return "ts"
 
-    def data(self):
+    def data(self, timestamp_colname = "ts"):
         result = {}
-        timestampCol = self.timestamp_colname()
         for deviceID in self.device_ids():
             deviceDf = None
             channels = self.channels(deviceID)
@@ -240,7 +258,7 @@ class FroniusArchiveJson(FroniusJson):
 
                 measurements = pd.Series(list(my_dict.values()))
 
-                df = pd.DataFrame({timestampCol: timestamps, channel: measurements})
+                df = pd.DataFrame({timestamp_colname: timestamps, channel: measurements})
 
                 if (deviceDf is None):
                     deviceDf = df
@@ -248,7 +266,7 @@ class FroniusArchiveJson(FroniusJson):
                     deviceDf = pd.merge(deviceDf, df, how='outer')
 
             # Arrange the rows to start with the timestamp.  match the order of the json file.
-            columnOrder = [timestampCol] + channels
+            columnOrder = [timestamp_colname] + channels
             deviceDf = deviceDf[columnOrder]
             result[deviceID] = deviceDf
 
