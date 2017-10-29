@@ -38,13 +38,13 @@ class FroniusInverter_positive(unittest.TestCase):
 
     def test_realtime_data(self):
         fi = FroniusInverter(inverter_ip)
-        rtd = fi.getInverterRealTimeData()
+        rtd = fi.get_inverter_realTime_data()
         self.assertEqual(type(rtd), dict)
 
 class FroniusInverter_RT_positive(unittest.TestCase):
     def test_getRealtimeData(self):
         fi = FroniusInverter(inverter_ip)
-        json = fi.getInverterRealTimeData()
+        json = fi.get_inverter_realTime_data()
         frt = FroniusRealTimeJson(json)
         rtd = frt.data()
         self.assertEqual(type(rtd), pandas.core.frame.DataFrame)
@@ -52,7 +52,7 @@ class FroniusInverter_RT_positive(unittest.TestCase):
 
     def FroniusInverter_RT_rename_timestamp(self):
         fi = FroniusInverter(inverter_ip)
-        json = fi.getInverterRealTimeData()
+        json = fi.get_inverter_realTime_data()
         frt = FroniusRealTimeJson(json)
         label = "foo"
         rtd = frt.data(label)
@@ -62,11 +62,11 @@ class FroniusInverter_RT_positive(unittest.TestCase):
 
     def FroniusInverter_RT_test_append(self):
         fi = FroniusInverter(inverter_ip)
-        json = fi.getInverterRealTimeData()
+        json = fi.get_inverter_realTime_data()
         frt = FroniusRealTimeJson(json)
         rtd = frt.data()
         # get 2nd observation
-        json = fi.getInverterRealTimeData()
+        json = fi.get_inverter_realTime_data()
         frt = FroniusRealTimeJson(json)
         rtd2 = frt.data('ts', append=rtd)
 
