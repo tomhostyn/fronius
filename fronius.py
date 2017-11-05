@@ -10,6 +10,7 @@ class FroniusInverter:
 
     tested_server_versions = ["1.5-4"]
     api_version = 1
+    debug = False
 
     channel_dict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
                     "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
@@ -56,7 +57,8 @@ class FroniusInverter:
     def get_inverter_realtime_data(self):
         payload = {"Scope": "System"}
         url = self.base_url + "GetInverterRealtimeData.cgi"
-#        print(url)
+        if FroniusInverter.debug:
+            print(url)
         r = requests.get(url, params=payload)
         return r.json()
 
@@ -95,7 +97,8 @@ class FroniusInverter:
 
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate, "Channel": channels}
         url = self.base_url + "GetArchiveData.cgi"
-        print(url, str(fromDate), "->", str(toDate))
+        if FroniusInverter.debug:
+            print(url, str(fromDate), "->", str(toDate))
         r = requests.get(url, params=payload)
         return r.json()
 
@@ -103,7 +106,8 @@ class FroniusInverter:
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate,
                    "Channel": ["InverterEvents", "InverterErrors"]}
         url = self.base_url + "GetArchiveData.cgi"
-        print(url, str(fromDate), "->", str(toDate))
+        if FroniusInverter.debug:
+            print(url, str(fromDate), "->", str(toDate))
         r = requests.get(url, params=payload)
         return r.json()
 
