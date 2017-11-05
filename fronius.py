@@ -60,13 +60,13 @@ class FroniusInverter:
         r = requests.get(url, params=payload)
         return r.json()
 
-    def getHistoricalData(self, fromDate, toDate, channels=None):
+    def get_historical_data(self, fromDate, toDate, channels=None):
 
         returndf = None
         error = 0
         while ((fromDate < toDate) and (error == 0)):
             to = min(toDate, fromDate + self.max_query_time - datetime.timedelta(seconds=1))
-            jsondata = self.getHistoricalDataJson(fromDate, to, channels)
+            jsondata = self.get_historical_data_json(fromDate, to, channels)
             fromDate += self.max_query_time
 
             faj = FroniusArchiveJson(jsondata)
@@ -88,7 +88,7 @@ class FroniusInverter:
                                 returndf[key] = value
         return returndf
 
-    def getHistoricalDataJson(self, fromDate, toDate, channels=None):
+    def get_historical_data_json(self, fromDate, toDate, channels=None):
 
         if (channels == None):
             channels = self.get_all_channels()
@@ -99,7 +99,7 @@ class FroniusInverter:
         r = requests.get(url, params=payload)
         return r.json()
 
-    def getHistoricalEventsJson(self, fromDate, toDate):
+    def get_historical_events_json(self, fromDate, toDate):
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate,
                    "Channel": ["InverterEvents", "InverterErrors"]}
         url = self.base_url + "GetArchiveData.cgi"
@@ -120,10 +120,10 @@ class FroniusInverter:
 
         return date + seconds
 
-    def findEarliestData(self, fromDate=None):
-        return self.findEarliestDataLineary(fromDate)
+    def find_earliest_data(self, fromDate=None):
+        return self.find_earliest_data_lineary(fromDate)
 
-    def findEarliestDataLineary(self, fromDate=None):
+    def find_earliest_data_lineary(self, fromDate=None):
         epoch = datetime.datetime(2017, 9, 1)
         channel = "TimeSpanInSec"
 
@@ -137,7 +137,7 @@ class FroniusInverter:
         found = False
         result = None
         while (not found and (fromDate < toDate)):
-            result = self.getHistoricalDataJson(fromDate, fromDate + step, [channel])
+            result = self.get_historical_data_json(fromDate, fromDate + step, [channel])
             if (1 == len(result["Body"]["Data"])):
                 found = True
             fromDate += step
@@ -147,7 +147,7 @@ class FroniusInverter:
         else:
             return None
 
-    def findEarliestDataBinary(self, fromDate=None, toDate=None, sampleScope=None, stopScope=None):
+    def find_earliest_data_binary(self, fromDate=None, toDate=None, sampleScope=None, stopScope=None):
         warnings.warn(
             "sometimes the fronius device returns values outside of the requested interval. this screws up the binary search.  check later")
         epoch = datetime.datetime(2017, 1, 1)
@@ -162,18 +162,18 @@ class FroniusInverter:
         if (stopScope == None):
             stopScope = sampleScope * 2
 
-        print("findEarliestData:", str(fromDate), " - ", str(toDate), "[ ", str(toDate - fromDate), " ]")
+        print("find_earliest_data:", str(fromDate), " - ", str(toDate), "[ ", str(toDate - fromDate), " ]")
         assert (fromDate < toDate)
         assert (sampleScope < stopScope)
 
         searchScope = (toDate - fromDate) / 2
         testTime = fromDate + searchScope
-        result = self.getHistoricalDataJson(testTime, testTime + sampleScope, [channel])
+        result = self.get_historical_data_json(testTime, testTime + sampleScope, [channel])
 
         if (0 == len(result["Body"]["Data"])):
             # no data was found in this interval
             # search the data later than the test time + scope
-            return (self.findEarliestDataBinary(testTime + sampleScope, toDate, sampleScope, stopScope))
+            return (self.find_earliest_data_binary(testTime + sampleScope, toDate, sampleScope, stopScope))
         else:
             # data was found.
             print("earliest data at : ", self._getStartOfEvents(result))
@@ -182,7 +182,7 @@ class FroniusInverter:
                 return self._getStartOfEvents(result)
             else:
                 # look for earlier data
-                return (self.findEarliestDataBinary(fromDate, testTime + sampleScope, sampleScope, stopScope))
+                return (self.find_earliest_data_binary(fromDate, testTime + sampleScope, sampleScope, stopScope))
 
 class FroniusJson:
     def __init__(self, json):
