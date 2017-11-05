@@ -132,6 +132,108 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
         self.check_channels(data_1_day, get_channels)
         self.check_date(data_1_day, from_date, to_date, "ts")
 
+skip_inverter_quirk_tests = os.getenv('SKIP_INVERTER_QUIRK_TESTS', False)
+
+class FroniusInverter_Historical_JSON_Quirks(unittest.TestCase):
+
+    #
+    #  it seems that requesting some data in a day, the inverter will respond with ALL data in that day.
+    #  day = local time midnight to midnight minus one second
+    #
+
+    def test_confirm_assumption_1_second(self):
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=8, minute=0, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(seconds=1),
+                                                       ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-04T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
+    def test_confirm_assumption_1_minute(self):
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=3, minute=0, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(minutes=1), ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-04T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
+    def test_confirm_assumption_1_hour(self):
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=2, minute=10, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(hours=1), ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-04T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
+    def test_confirm_assumption_24_hours_minus_one_second(self):
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=0, minute=0, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(hours=24)
+                                                       - datetime.timedelta(seconds=1), ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-04T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
+    def test_confirm_assumption_24_hours_minus_one_second(self):
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=0, minute=0, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(hours=24), ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-05T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
+    def test_confirm_assumption_8_hours_over_2_days(self):
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=20, minute=0, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(hours=8), ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-05T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
+
 skip_timeout_tests = os.getenv('SKIP_TIMEOUT_TESTS', False)
 
 class FroniusInverter_timeout_tests(unittest.TestCase):
