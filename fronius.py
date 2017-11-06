@@ -62,14 +62,26 @@ class FroniusInverter:
         r = requests.get(url, params=payload)
         return r.json()
 
-    def get_historical_data(self, fromDate, toDate, channels=None):
+    def get_historical_data(self, fromDate, toDate, channels=None, strict=True):
 
         returndf = None
         error = 0
-        while ((fromDate < toDate) and (error == 0)):
-            to = min(toDate, fromDate + self.max_query_time - datetime.timedelta(seconds=1))
-            jsondata = self.get_historical_data_json(fromDate, to, channels)
-            fromDate += self.max_query_time
+
+        if fromDate.tzinfo is None:
+            warnings.warn("fromDate is not timezone aware. assuming local timezone")
+            tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+            fromDate.astimezone(tz)
+
+        if toDate.tzinfo is None:
+            warnings.warn("toDate is not timezone aware. assuming local timezone")
+            tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+            toDate.astimezone(tz)
+
+        fdate = fromDate
+        while ((fdate < toDate) and (error == 0)):
+            tdate = min(toDate, fdate + self.max_query_time - datetime.timedelta(seconds=1))
+            jsondata = self.get_historical_data_json(fdate, tdate, channels)
+            fdate += self.max_query_time
 
             faj = FroniusArchiveJson(jsondata)
             error = faj.error_code()
@@ -88,6 +100,12 @@ class FroniusInverter:
                                 returndf[key] = returndf[key].sort_values(FroniusArchiveJson.timestamp_colname())
                             else:
                                 returndf[key] = value
+
+                    if strict:
+                        for key, value in returndf.items():
+                            returndf[key] = returndf[key].loc[fromDate <= returndf[key]['ts']]
+                            returndf[key] = returndf[key].loc[returndf[key]['ts'] < toDate]
+
         return returndf
 
     def get_historical_data_json(self, fromDate, toDate, channels=None):
