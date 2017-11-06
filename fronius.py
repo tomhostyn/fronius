@@ -70,12 +70,12 @@ class FroniusInverter:
         if fromDate.tzinfo is None:
             warnings.warn("fromDate is not timezone aware. assuming local timezone")
             tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-            fromDate.astimezone(tz)
+            fromDate = fromDate.astimezone(tz)
 
         if toDate.tzinfo is None:
             warnings.warn("toDate is not timezone aware. assuming local timezone")
             tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-            toDate.astimezone(tz)
+            toDate = toDate.astimezone(tz)
 
         fdate = fromDate
         while ((fdate < toDate) and (error == 0)):
