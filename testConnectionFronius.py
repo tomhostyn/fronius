@@ -114,8 +114,8 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
         all_dates = pandas.concat(all_series)
         earliest = min(all_dates)
         latest = max(all_dates)
-        print (earliest, latest)
-        print (from_date, to_date)
+        #print (earliest, latest)
+        #print (from_date, to_date)
         self.assertTrue(from_date <= earliest)
         self.assertTrue(latest <= to_date)
 
