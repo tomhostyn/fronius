@@ -119,7 +119,6 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
         self.assertTrue(from_date <= earliest)
         self.assertTrue(latest <= to_date)
 
-
     def test_FroniusInverter_Historical_test_12_hour_range(self):
         get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
         fi = FroniusInverter(inverter_ip)
@@ -127,19 +126,47 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
         to_date = date_with_data + datetime.timedelta(hours=12)
         data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
         # should have datamager and inverter data
-        self.assertEqual(len(data_1_day.keys()), 2)
-        self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
-        self.check_channels(data_1_day, get_channels)
-        self.check_date(data_1_day, from_date, to_date, "ts")
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 2)
+            self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
+    def test_FroniusInverter_Historical_test_UTC_8_datetimes(self):
+        """
+            the fronius server does not respond well to UTC+8 for some reason
+        """
+
+        t1_utc_8 = datetime.datetime(year=2017, month=11, day=1, hour=4) - datetime.timedelta(hours=8)
+        t1_utc_8 = pytz.timezone('Etc/GMT+8').localize(t1_utc_8, is_dst=None)
+
+        f = t1_utc_8
+        t = t1_utc_8 + datetime.timedelta(hours=16)
+        fi = FroniusInverter(inverter_ip)
+        get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
+
+        data_liberal = fi.get_historical_data(f, t, get_channels, strict=False)
+        self.assertTrue(data_liberal is not None)
+
+        if data_liberal is not None:
+            self.assertEqual(len(data_liberal.keys()), 2)
+            self.check_devices(data_liberal, ["datamanager:/", "inverter/"])
+            self.check_channels(data_liberal, get_channels)
+            self.check_date(data_liberal, from_date, to_date, "ts")
+
+
+
 
 skip_inverter_quirk_tests = os.getenv('SKIP_INVERTER_QUIRK_TESTS', False)
+#skip_inverter_quirk_tests = False
 
 class FroniusInverter_Historical_JSON_Quirks(unittest.TestCase):
 
-    #
-    #  it seems that requesting some data in a day, the inverter will respond with ALL data in that day.
-    #  day = local time midnight to midnight minus one second
-    #
+    """
+    It seems that requesting some data in a day, the inverter will respond with ALL data in that day.
+    day = local time midnight to midnight minus one second
+    """
 
     def test_confirm_assumption_1_second(self):
         if skip_inverter_quirk_tests:
@@ -232,6 +259,31 @@ class FroniusInverter_Historical_JSON_Quirks(unittest.TestCase):
             expected_request_end = '2017-11-05T23:59:59+01:00'
             self.assertEqual(request_start, expected_request_start)
             self.assertEqual(request_end, expected_request_end)
+
+    def test_confirm_assumption_Server_uses_UTC(self):
+        """
+        assume the server returns a full day of data on a given UTC date, and interprets the data as UTC
+
+        try sending it UTC +1 data that covers 1 day in UTC and 2 days in UTC+1:
+            06:00 - 23:59  UTC
+            14:00 - 08:59  UTC +1
+            confirm that only data of day 1 is returned
+        """
+
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+            day = datetime.datetime(year=2017, month=11, day=4, hour=20, minute=0, second=0)
+            data_1_day_J = fi.get_historical_data_json(day, day + datetime.timedelta(hours=8), ["Current_AC_Phase_1"])
+
+            request_start = data_1_day_J['Head']['RequestArguments']['StartDate']
+            expected_request_start = '2017-11-04T00:00:00+01:00'
+            request_end = data_1_day_J['Head']['RequestArguments']['EndDate']
+            expected_request_end = '2017-11-05T23:59:59+01:00'
+            self.assertEqual(request_start, expected_request_start)
+            self.assertEqual(request_end, expected_request_end)
+
 
 
 skip_timeout_tests = os.getenv('SKIP_TIMEOUT_TESTS', False)
