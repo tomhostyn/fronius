@@ -106,18 +106,23 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
             found_all = found_all and found
         self.assertTrue(found_all)
 
-    def check_date(self, response, from_date, to_date, ts_label):
+    def check_date(self, response, from_date, to_date, ts_label, strict=True):
         all_series = []
         for v in response.values():
             all_series += [v[ts_label]]
 
         all_dates = pandas.concat(all_series)
-        earliest = min(all_dates)
-        latest = max(all_dates)
-        #print (earliest, latest)
-        #print (from_date, to_date)
-        self.assertTrue(from_date <= earliest)
-        self.assertTrue(latest <= to_date)
+        if len(all_dates) != 0:
+            earliest = min(all_dates)
+            latest = max(all_dates)
+            if strict:
+                self.assertTrue(from_date <= earliest)
+                self.assertTrue(latest <= to_date)
+            else:
+                # liberal
+                self.assertTrue(from_date - datetime.timedelta(hours=24) <= earliest)
+                self.assertTrue(latest <= to_date + datetime.timedelta(hours=24))
+
 
     def test_FroniusInverter_Historical_test_12_hour_range(self):
         get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
@@ -181,7 +186,7 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
             self.assertEqual(len(data_liberal.keys()), 2)
             self.check_devices(data_liberal, ["datamanager:/", "inverter/"])
             self.check_channels(data_liberal, get_channels)
-            self.check_date(data_liberal, from_date, to_date, "ts")
+            self.check_date(data_liberal, from_date, to_date, "ts", liberal=True)
 
     def test_FroniusInverter_Historical_test_strict_vs_liberal_datetimes(self):
         """
@@ -207,13 +212,20 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
         t = t1_utc + datetime.timedelta(hours=16)
         data_liberal = fi.get_historical_data(f, t, channels, strict=False)
 
+        if data_liberal is not None:
+            self.check_date(data_liberal, f, t, "ts", strict=False)
+
         timestamps_liberal = data_liberal[key][ts]
         earliest_liberal_utc = min(timestamps_liberal)
         latest_liberal_utc = max(timestamps_liberal)
         count_liberal_utc = len(timestamps_liberal)
 
-        data_strict = fi.get_historical_data(earliest_liberal_utc, latest_liberal_utc + datetime.timedelta(seconds=1), channels,
+        data_strict = fi.get_historical_data(earliest_liberal_utc,
+                                             latest_liberal_utc + datetime.timedelta(seconds=1), channels,
                                              strict=True)
+        if data_liberal is not None:
+            self.check_date(data_strict, earliest_liberal_utc,
+                            latest_liberal_utc + datetime.timedelta(seconds=1), "ts")
 
         timestamps_strict = data_strict[key][ts]
         earliest_strict_utc = min(timestamps_strict)
@@ -225,6 +237,10 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
 
         data_strict = fi.get_historical_data(earliest_liberal_utc, earliest_liberal_utc + datetime.timedelta(seconds=1),
                                              channels, strict=True)
+
+        if data_liberal is not None:
+            self.check_date(data_strict, earliest_liberal_utc,
+                            earliest_liberal_utc + datetime.timedelta(seconds=1), "ts")
 
         timestamps_strict = data_strict[key][ts]
         earliest_strict_utc = min(timestamps_strict)
