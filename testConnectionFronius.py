@@ -133,6 +133,34 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
             self.check_channels(data_1_day, get_channels)
             self.check_date(data_1_day, from_date, to_date, "ts")
 
+    def test_FroniusInverter_Historical_test_only_datamanager_data(self):
+        get_channels = ["Digital_PowerManagementRelay_Out_1"]
+        fi = FroniusInverter(inverter_ip)
+        from_date = date_with_data
+        to_date = date_with_data + datetime.timedelta(hours=48)
+        data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
+        # should have datamager and inverter data
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 1)
+            self.check_devices(data_1_day, ["datamanager:/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
+    def test_FroniusInverter_Historical_test_only_inverter_data(self):
+        get_channels = ["Current_AC_Phase_1"]
+        fi = FroniusInverter(inverter_ip)
+        from_date = date_with_data
+        to_date = date_with_data + datetime.timedelta(hours=12)
+        data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
+        # should have datamager and inverter data
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 1)
+            self.check_devices(data_1_day, [ "inverter/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
     def test_FroniusInverter_Historical_test_UTC_8_datetimes(self):
         """
             the fronius server does not respond well to UTC+8 for some reason
@@ -155,7 +183,56 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
             self.check_channels(data_liberal, get_channels)
             self.check_date(data_liberal, from_date, to_date, "ts")
 
+    def test_FroniusInverter_Historical_test_strict_vs_liberal_datetimes(self):
+        """
+            test - liberal vs strict
+            fetch 16 hours of data in liberal mode
+            fetch  D   04:00 UTC   - D 20:00 UTC   - should yield data at most 24 hours of data
 
+            fetch the same measurements using strict mode
+
+            pick 1 measurement. fetch that single measurement using strict mode
+        """
+
+        channels = ["Current_AC_Phase_1"]
+
+        t1_utc = datetime.datetime(year=2017, month=11, day=1, hour=4)
+        t1_utc = pytz.timezone('UCT').localize(t1_utc, is_dst=None)
+
+        fi = FroniusInverter(inverter_ip)
+        key = 'inverter/1'
+        ts = 'ts'
+
+        f = t1_utc
+        t = t1_utc + datetime.timedelta(hours=16)
+        data_liberal = fi.get_historical_data(f, t, channels, strict=False)
+
+        timestamps_liberal = data_liberal[key][ts]
+        earliest_liberal_utc = min(timestamps_liberal)
+        latest_liberal_utc = max(timestamps_liberal)
+        count_liberal_utc = len(timestamps_liberal)
+
+        data_strict = fi.get_historical_data(earliest_liberal_utc, latest_liberal_utc + datetime.timedelta(seconds=1), channels,
+                                             strict=True)
+
+        timestamps_strict = data_strict[key][ts]
+        earliest_strict_utc = min(timestamps_strict)
+        latest_strict_utc = max(timestamps_strict)
+        count_strict_utc = len(timestamps_strict)
+
+        self.assertEqual(latest_liberal_utc - earliest_liberal_utc, latest_strict_utc - earliest_strict_utc)
+        self.assertEqual(count_liberal_utc, count_strict_utc)
+
+        data_strict = fi.get_historical_data(earliest_liberal_utc, earliest_liberal_utc + datetime.timedelta(seconds=1),
+                                             channels, strict=True)
+
+        timestamps_strict = data_strict[key][ts]
+        earliest_strict_utc = min(timestamps_strict)
+        latest_strict_utc = max(timestamps_strict)
+        count_strict_utc = len(timestamps_strict)
+
+        self.assertEqual(datetime.timedelta(seconds=0), latest_strict_utc - earliest_strict_utc)
+        self.assertEqual(1, count_strict_utc)
 
 
 skip_inverter_quirk_tests = os.getenv('SKIP_INVERTER_QUIRK_TESTS', False)
