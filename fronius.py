@@ -11,6 +11,8 @@ class FroniusInverter:
     tested_server_versions = ["1.5-4"]
     api_version = 1
     debug = False
+    timestamp_colname = "ts"
+
 
     channel_dict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
                     "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
@@ -22,8 +24,13 @@ class FroniusInverter:
                     "Temperature_Channel_2": "1", "Digital_Channel_1": "1", "Digital_Channel_2": "1", "Radiation": "1",
                     "Hybrid_Operating_State": "1"}
 
-    max_query_time = datetime.timedelta(
-        days=16)  # the inverter will return an error when asking for more than 16 days of data
+    max_query_time = datetime.timedelta(days=15)
+    """ 
+        the inverter will return an error when asking for more than 16 days of data
+        with error "Query interval is restricted to 16 days"
+        however, smaller intervals may cause similar issues.
+        set value to suboptimal value that works
+    """
 
     def __init__(self, host):
         self.host = host
@@ -81,7 +88,7 @@ class FroniusInverter:
         while ((fdate < toDate) and (error == 0)):
             tdate = min(toDate, fdate + self.max_query_time - datetime.timedelta(seconds=1))
             jsondata = self.get_historical_data_json(fdate, tdate, channels)
-            fdate += self.max_query_time
+            fdate = tdate
 
             faj = FroniusArchiveJson(jsondata)
             error = faj.error_code()
@@ -97,18 +104,21 @@ class FroniusInverter:
                         for key, value in df.items():
                             if key in returndf:
                                 returndf[key] = pd.concat([returndf[key], value])
-                                returndf[key] = returndf[key].sort_values(FroniusArchiveJson.timestamp_colname())
+                                returndf[key] = returndf[key].sort_values(self.timestamp_colname)
                             else:
                                 returndf[key] = value
 
                     if strict:
                         for key, value in returndf.items():
-                            returndf[key] = returndf[key].loc[fromDate <= returndf[key]['ts']]
-                            returndf[key] = returndf[key].loc[returndf[key]['ts'] < toDate]
+                            returndf[key] = returndf[key].loc[fromDate <= returndf[key][self.timestamp_colname]]
+                            returndf[key] = returndf[key].loc[returndf[key][self.timestamp_colname] < toDate]
 
         return returndf
 
     def get_historical_data_json(self, fromDate, toDate, channels=None):
+
+        if  self.max_query_time < toDate - fromDate:
+            warnings.warn("time period exceeds maximal query time")
 
         if (channels == None):
             channels = self.get_all_channels()

@@ -123,7 +123,6 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
                 self.assertTrue(from_date - datetime.timedelta(hours=24) <= earliest)
                 self.assertTrue(latest <= to_date + datetime.timedelta(hours=24))
 
-
     def test_FroniusInverter_Historical_test_12_hour_range(self):
         get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
         fi = FroniusInverter(inverter_ip)
@@ -137,6 +136,63 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
             self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
             self.check_channels(data_1_day, get_channels)
             self.check_date(data_1_day, from_date, to_date, "ts")
+
+    def test_FroniusInverter_Historical_test_48_hour_range(self):
+        get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
+        fi = FroniusInverter(inverter_ip)
+        from_date = date_with_data
+        to_date = date_with_data + datetime.timedelta(hours=48)
+        data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
+        # should have datamager and inverter data
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 2)
+            self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
+    def test_FroniusInverter_Historical_test_7_day_range(self):
+        get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
+        fi = FroniusInverter(inverter_ip)
+        from_date = date_with_data
+        to_date = date_with_data + datetime.timedelta(days=7)
+        data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
+        # should have datamager and inverter data
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 2)
+            self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
+    def test_FroniusInverter_Historical_test_16_day_range(self):
+        get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
+        fi = FroniusInverter(inverter_ip)
+        from_date = date_with_data - datetime.timedelta(days=8)
+        to_date = date_with_data + datetime.timedelta(days=8)
+        data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
+        # should have datamager and inverter data
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 2)
+            self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
+    def test_FroniusInverter_Historical_test_32_day_range(self):
+        get_channels = ["Digital_PowerManagementRelay_Out_1", "Current_AC_Phase_1"]
+        fi = FroniusInverter(inverter_ip)
+        from_date = date_with_data - datetime.timedelta(days=16)
+        to_date = date_with_data + datetime.timedelta(days=16)
+        data_1_day = fi.get_historical_data(from_date, to_date, get_channels)
+        # should have datamager and inverter data
+        self.assertTrue(data_1_day is not None)
+        if data_1_day is not None:
+            self.assertEqual(len(data_1_day.keys()), 2)
+            self.check_devices(data_1_day, ["datamanager:/", "inverter/"])
+            self.check_channels(data_1_day, get_channels)
+            self.check_date(data_1_day, from_date, to_date, "ts")
+
 
     def test_FroniusInverter_Historical_test_only_datamanager_data(self):
         get_channels = ["Digital_PowerManagementRelay_Out_1"]
