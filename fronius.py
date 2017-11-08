@@ -47,11 +47,11 @@ class FroniusInverter:
         assert isinstance(api_vers, dict)
         if api_vers['APIVersion'] != self.api_version:
             warnings.warn(
-                "using api version newer than last tested (" + self.api_version + "): " + api_vers['APIVersion'])
+                "using api version newer than last tested (" + str(self.api_version) + "): " + api_vers['APIVersion'])
             compatible = False
         if not api_vers['CompatibilityRange'] in FroniusInverter.tested_server_versions:
             warnings.warn(
-                "using api compatibility range newer than last tested (" + FroniusInverter.tested_server_versions + "): " +
+                "using api compatibility range newer than last tested (" + str(FroniusInverter.tested_server_versions) + "): " +
                 api_vers['CompatibilityRange'])
             compatible = False
         return compatible, api_vers
