@@ -171,7 +171,7 @@ class FroniusInverter:
 
         assert (fromDate < toDate)
 
-        step = datetime.timedelta(days=14)
+        step = self.max_query_time
         found = False
         result = None
         while (not found and (fromDate < toDate)):
