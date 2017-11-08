@@ -308,7 +308,6 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
 
 
 skip_inverter_quirk_tests = os.getenv('SKIP_INVERTER_QUIRK_TESTS', False)
-#skip_inverter_quirk_tests = False
 
 class FroniusInverter_Historical_JSON_Quirks(unittest.TestCase):
 
@@ -433,6 +432,23 @@ class FroniusInverter_Historical_JSON_Quirks(unittest.TestCase):
             self.assertEqual(request_start, expected_request_start)
             self.assertEqual(request_end, expected_request_end)
 
+    def test_confirm_assumption_Server_cannot_accept_any_TZ(self):
+        """
+            the server will return invalid date format (too much segments) '2017-10-31+20%3A00%3A00-08%3A00' error
+            when sending datetimes in UTC+8
+        """
+        if skip_inverter_quirk_tests:
+            self.skipTest('skipped test due to SKIP_INVERTER_QUIRK_TESTS')
+        else:
+            fi = FroniusInverter(inverter_ip)
+
+            t1_utc_8 = datetime.datetime(year=2017, month=11, day=1, hour=4) - datetime.timedelta(hours=8)
+            t1_utc_8 = pytz.timezone('Etc/GMT+8').localize(t1_utc_8, is_dst=None)
+
+            data_1_day_J = fi.get_historical_data_json(t1_utc_8, t1_utc_8 + datetime.timedelta(hours=24), ["Current_AC_Phase_1"])
+
+            faj = FroniusArchiveJson(data_1_day_J)
+            self.assertEqual(faj.error_code(), 255)
 
 
 skip_timeout_tests = os.getenv('SKIP_TIMEOUT_TESTS', False)
