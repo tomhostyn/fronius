@@ -242,7 +242,7 @@ class FroniusInverter_Historical_positive(unittest.TestCase):
             self.assertEqual(len(data_liberal.keys()), 2)
             self.check_devices(data_liberal, ["datamanager:/", "inverter/"])
             self.check_channels(data_liberal, get_channels)
-            self.check_date(data_liberal, from_date, to_date, "ts", liberal=True)
+            self.check_date(data_liberal, f, t, "ts", strict=False)
 
     def test_FroniusInverter_Historical_test_strict_vs_liberal_datetimes(self):
         """
