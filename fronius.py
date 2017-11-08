@@ -5,6 +5,7 @@ import dateutil
 import pytz
 import pandas as pd
 
+
 class FroniusInverter:
     'class implementing Fronius Solar API v1'
 
@@ -50,8 +51,8 @@ class FroniusInverter:
             compatible = False
         if not api_vers['CompatibilityRange'] in FroniusInverter.tested_server_versions:
             warnings.warn(
-                "using api compatibility range newer than last tested (" + FroniusInverter.tested_server_versions + "): " + api_vers[
-                    'CompatibilityRange'])
+                "using api compatibility range newer than last tested (" + FroniusInverter.tested_server_versions + "): " +
+                api_vers['CompatibilityRange'])
             compatible = False
         return compatible, api_vers
 
@@ -89,7 +90,7 @@ class FroniusInverter:
         # the fronius controller is picky when it comes to local timezones and may throw an error
         # convert to UTC
         fromDate = fromDate.astimezone(pytz.utc)
-        toDate   = toDate.astimezone(pytz.utc)
+        toDate = toDate.astimezone(pytz.utc)
 
         fdate = fromDate
         while ((fdate < toDate) and (error == 0)):
@@ -124,7 +125,7 @@ class FroniusInverter:
 
     def get_historical_data_json(self, fromDate, toDate, channels=None):
 
-        if  self.max_query_time < toDate - fromDate:
+        if self.max_query_time < toDate - fromDate:
             warnings.warn("time period exceeds maximal query time")
 
         if (channels is None):
@@ -199,7 +200,7 @@ class FroniusInverter:
         # print("find_earliest_data:", str(fromDate), " - ", str(toDate), "[ ", str(toDate - fromDate), " ]")
         assert (fromDate < toDate)
 
-        testTimeStart = max(fromDate, fromDate + (toDate - fromDate)/2 - sampleScope/2)
+        testTimeStart = max(fromDate, fromDate + (toDate - fromDate) / 2 - sampleScope / 2)
         testTimeEnd = min(toDate, testTimeStart + sampleScope)
         result = self.get_historical_data_json(testTimeStart, testTimeEnd, [channel])
 
@@ -215,13 +216,14 @@ class FroniusInverter:
         else:
             # data was found.
             earliestFound = self._getStartOfEvents(result)
-            #print("earliest data at : ", earliestFound)
+            # print("earliest data at : ", earliestFound)
             if testTimeStart == fromDate:
                 # we found the earliest point
                 return earliestFound
             else:
                 # look for earlier data
                 return self.find_earliest_data_binary(fromDate, earliestFound + datetime.timedelta(seconds=1))
+
 
 class FroniusJson:
     def __init__(self, json):
@@ -258,7 +260,7 @@ class FroniusRealTimeJson(FroniusJson):
             data = self.json["Body"]["Data"]
             assert ('YEAR_ENERGY' in (data.keys()))
 
-    def data(self, timestamp_colname = "ts", append=None):
+    def data(self, timestamp_colname="ts", append=None):
         series = [pd.Series([self.timestamp()], name=timestamp_colname)]
         for key, value in self.json['Body']['Data'].items():
             v = value['Values']['1']
@@ -271,6 +273,7 @@ class FroniusRealTimeJson(FroniusJson):
             result = pd.merge(append, result, how='outer')
         return result
 
+
 class FroniusArchiveJson(FroniusJson):
     def device_ids(self):
         return list(self.json["Body"]["Data"].keys())
@@ -280,7 +283,7 @@ class FroniusArchiveJson(FroniusJson):
             deviceID = self.device_ids()[0]
         return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
-    def data(self, timestamp_colname = "ts"):
+    def data(self, timestamp_colname="ts"):
         result = {}
         for deviceID in self.device_ids():
             deviceDf = None
