@@ -27,6 +27,10 @@ class TestFindingEarliestData(unittest.TestCase):
         found = fi.find_earliest_data_binary()
         self.assertEqual(found - inverter_installation_time, datetime.timedelta(seconds=0))
 
+    def test_find_earliest(self):
+        fi=FroniusInverter(inverter_ip)
+        found = fi.find_earliest_data()
+        self.assertEqual(found - inverter_installation_time, datetime.timedelta(seconds=0))
 
 if __name__ == '__main__':
     unittest.main()
