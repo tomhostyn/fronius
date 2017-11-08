@@ -127,7 +127,7 @@ class FroniusInverter:
         if  self.max_query_time < toDate - fromDate:
             warnings.warn("time period exceeds maximal query time")
 
-        if (channels == None):
+        if (channels is None):
             channels = self.get_all_channels()
 
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate, "Channel": channels}
@@ -165,7 +165,7 @@ class FroniusInverter:
     def find_earliest_data_linear(self, fromDate=None):
         channel = "TimeSpanInSec"
 
-        if (fromDate == None):
+        if (fromDate is None):
             fromDate = self.epoch
         toDate = datetime.datetime.now(pytz.utc)
 
@@ -189,9 +189,9 @@ class FroniusInverter:
 
         channel = "TimeSpanInSec"
 
-        if (fromDate == None):
+        if (fromDate is None):
             fromDate = self.epoch
-        if (toDate == None):
+        if (toDate is None):
             toDate = datetime.datetime.now(pytz.utc)
 
         sampleScope = self.max_query_time
@@ -276,7 +276,7 @@ class FroniusArchiveJson(FroniusJson):
         return list(self.json["Body"]["Data"].keys())
 
     def channels(self, deviceID=None):
-        if (deviceID == None):
+        if (deviceID is None):
             deviceID = self.device_ids()[0]
         return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
