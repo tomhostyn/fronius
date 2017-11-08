@@ -2,8 +2,8 @@ import requests
 import warnings
 import datetime
 import dateutil
+import pytz
 import pandas as pd
-
 
 class FroniusInverter:
     'class implementing Fronius Solar API v1'
@@ -83,6 +83,11 @@ class FroniusInverter:
             warnings.warn("toDate is not timezone aware. assuming local timezone")
             tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
             toDate = toDate.astimezone(tz)
+
+        # the fronius controller is picky when it comes to local timezones and may throw an error
+        # convert to UTC
+        fromDate = fromDate.astimezone(pytz.utc)
+        toDate   = toDate.astimezone(pytz.utc)
 
         fdate = fromDate
         while ((fdate < toDate) and (error == 0)):
