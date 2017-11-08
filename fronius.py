@@ -45,7 +45,7 @@ class FroniusInverter:
         api_vers = r.json()
         compatible = True
         assert isinstance(api_vers, dict)
-        if (api_vers['APIVersion'] != self.api_version):
+        if api_vers['APIVersion'] != self.api_version:
             warnings.warn(
                 "using api version newer than last tested (" + self.api_version + "): " + api_vers['APIVersion'])
             compatible = False
@@ -93,19 +93,19 @@ class FroniusInverter:
         toDate = toDate.astimezone(pytz.utc)
 
         fdate = fromDate
-        while ((fdate < toDate) and (error == 0)):
+        while (fdate < toDate) and (error == 0):
             tdate = min(toDate, fdate + self.max_query_time - datetime.timedelta(seconds=1))
             jsondata = self.get_historical_data_json(fdate, tdate, channels)
             fdate = tdate
 
             faj = FroniusArchiveJson(jsondata)
             error = faj.error_code()
-            if (faj.error_code() != 0):
+            if faj.error_code() != 0:
                 warnings.warn(str(faj.error_status()))
             else:
-                if (not faj.is_empty()):
+                if not faj.is_empty():
                     df = faj.data()
-                    if (returndf is None):
+                    if returndf is None:
                         returndf = df
                     else:
                         # merge the dictionaries for different device_ids
@@ -128,7 +128,7 @@ class FroniusInverter:
         if self.max_query_time < toDate - fromDate:
             warnings.warn("time period exceeds maximal query time")
 
-        if (channels is None):
+        if channels is None:
             channels = self.get_all_channels()
 
         payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate, "Channel": channels}
@@ -152,7 +152,7 @@ class FroniusInverter:
         assert (len(data) == 1)
         inverterID = (list(data.keys())[0])
 
-        offset = int(list(((eventjson["Body"]["Data"]))[inverterID]["Data"]["TimeSpanInSec"]["Values"].keys())[0])
+        offset = int(list((eventjson["Body"]["Data"])[inverterID]["Data"]["TimeSpanInSec"]["Values"].keys())[0])
         seconds = datetime.timedelta(seconds=offset)
 
         datestring = eventjson["Head"]["RequestArguments"]["StartDate"]
@@ -166,7 +166,7 @@ class FroniusInverter:
     def find_earliest_data_linear(self, fromDate=None):
         channel = "TimeSpanInSec"
 
-        if (fromDate is None):
+        if fromDate is None:
             fromDate = self.epoch
         toDate = datetime.datetime.now(pytz.utc)
 
@@ -175,13 +175,13 @@ class FroniusInverter:
         step = self.max_query_time
         found = False
         result = None
-        while (not found and (fromDate < toDate)):
+        while not found and (fromDate < toDate):
             result = self.get_historical_data_json(fromDate, fromDate + step, [channel])
-            if (1 == len(result["Body"]["Data"])):
+            if 1 == len(result["Body"]["Data"]):
                 found = True
             fromDate += step
 
-        if (found):
+        if found:
             return self._getStartOfEvents(result)
         else:
             return None
@@ -190,9 +190,9 @@ class FroniusInverter:
 
         channel = "TimeSpanInSec"
 
-        if (fromDate is None):
+        if fromDate is None:
             fromDate = self.epoch
-        if (toDate is None):
+        if toDate is None:
             toDate = datetime.datetime.now(pytz.utc)
 
         sampleScope = self.max_query_time
@@ -204,7 +204,7 @@ class FroniusInverter:
         testTimeEnd = min(toDate, testTimeStart + sampleScope)
         result = self.get_historical_data_json(testTimeStart, testTimeEnd, [channel])
 
-        if (0 == len(result["Body"]["Data"])):
+        if 0 == len(result["Body"]["Data"]):
             # no data was found in this interval
 
             if testTimeEnd == toDate:
@@ -212,7 +212,7 @@ class FroniusInverter:
                 return None
             else:
                 # search the data later than the test time + scope
-                return (self.find_earliest_data_binary(testTimeEnd, toDate))
+                return self.find_earliest_data_binary(testTimeEnd, toDate)
         else:
             # data was found.
             earliestFound = self._getStartOfEvents(result)
@@ -247,7 +247,7 @@ class FroniusJson:
         return int(self.json["Head"]["Status"]["Code"])
 
     def error_status(self):
-        return (self.json["Head"]["Status"])
+        return self.json["Head"]["Status"]
 
     def is_empty(self):
         return len(self.json["Body"]["Data"]) == 0
@@ -256,7 +256,7 @@ class FroniusJson:
 class FroniusRealTimeJson(FroniusJson):
     def __init__(self, json):
         super().__init__(json)
-        if (self.error_code() == 0):
+        if self.error_code() == 0:
             data = self.json["Body"]["Data"]
             assert ('YEAR_ENERGY' in (data.keys()))
 
@@ -279,7 +279,7 @@ class FroniusArchiveJson(FroniusJson):
         return list(self.json["Body"]["Data"].keys())
 
     def channels(self, deviceID=None):
-        if (deviceID is None):
+        if deviceID is None:
             deviceID = self.device_ids()[0]
         return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
@@ -299,7 +299,7 @@ class FroniusArchiveJson(FroniusJson):
 
                 df = pd.DataFrame({timestamp_colname: timestamps, channel: measurements})
 
-                if (deviceDf is None):
+                if deviceDf is None:
                     deviceDf = df
                 else:
                     deviceDf = pd.merge(deviceDf, df, how='outer')
