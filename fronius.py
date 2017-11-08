@@ -13,6 +13,8 @@ class FroniusInverter:
     debug = False
     timestamp_colname = "ts"
 
+    # earliest possible data is set to the publishing date of Fronius Solar API V1 document
+    epoch = pytz.utc.localize(datetime.datetime(2017, 6, 8), is_dst=None)
 
     channel_dict = {"TimeSpanInSec": "sec", "Digital_PowerManagementRelay_Out_1": "1",
                     "EnergyReal_WAC_Sum_Produced": "Wh", "Current_DC_String_1": "1A", "Current_DC_String_2": "1A",
@@ -158,15 +160,14 @@ class FroniusInverter:
         return date + seconds
 
     def find_earliest_data(self, fromDate=None):
-        return self.find_earliest_data_lineary(fromDate)
+        return self.find_earliest_data_binary(fromDate)
 
-    def find_earliest_data_lineary(self, fromDate=None):
-        epoch = datetime.datetime(2017, 9, 1)
+    def find_earliest_data_linear(self, fromDate=None):
         channel = "TimeSpanInSec"
 
         if (fromDate == None):
-            fromDate = epoch
-        toDate = datetime.datetime.now()
+            fromDate = self.epoch
+        toDate = datetime.datetime.now(pytz.utc)
 
         assert (fromDate < toDate)
 
@@ -184,42 +185,43 @@ class FroniusInverter:
         else:
             return None
 
-    def find_earliest_data_binary(self, fromDate=None, toDate=None, sampleScope=None, stopScope=None):
-        warnings.warn(
-            "sometimes the fronius device returns values outside of the requested interval. this screws up the binary search.  check later")
-        epoch = datetime.datetime(2017, 1, 1)
+    def find_earliest_data_binary(self, fromDate=None, toDate=None):
+
         channel = "TimeSpanInSec"
 
         if (fromDate == None):
-            fromDate = epoch
+            fromDate = self.epoch
         if (toDate == None):
-            toDate = datetime.datetime.now()
-        if (sampleScope == None):
-            sampleScope = datetime.timedelta(1)
-        if (stopScope == None):
-            stopScope = sampleScope * 2
+            toDate = datetime.datetime.now(pytz.utc)
 
-        print("find_earliest_data:", str(fromDate), " - ", str(toDate), "[ ", str(toDate - fromDate), " ]")
+        sampleScope = self.max_query_time
+
+        # print("find_earliest_data:", str(fromDate), " - ", str(toDate), "[ ", str(toDate - fromDate), " ]")
         assert (fromDate < toDate)
-        assert (sampleScope < stopScope)
 
-        searchScope = (toDate - fromDate) / 2
-        testTime = fromDate + searchScope
-        result = self.get_historical_data_json(testTime, testTime + sampleScope, [channel])
+        testTimeStart = max(fromDate, fromDate + (toDate - fromDate)/2 - sampleScope/2)
+        testTimeEnd = min(toDate, testTimeStart + sampleScope)
+        result = self.get_historical_data_json(testTimeStart, testTimeEnd, [channel])
 
         if (0 == len(result["Body"]["Data"])):
             # no data was found in this interval
-            # search the data later than the test time + scope
-            return (self.find_earliest_data_binary(testTime + sampleScope, toDate, sampleScope, stopScope))
+
+            if testTimeEnd == toDate:
+                # No data found at all!
+                return None
+            else:
+                # search the data later than the test time + scope
+                return (self.find_earliest_data_binary(testTimeEnd, toDate))
         else:
             # data was found.
-            print("earliest data at : ", self._getStartOfEvents(result))
-            if (searchScope < stopScope):
-                # we found the earliest point within scope
-                return self._getStartOfEvents(result)
+            earliestFound = self._getStartOfEvents(result)
+            #print("earliest data at : ", earliestFound)
+            if testTimeStart == fromDate:
+                # we found the earliest point
+                return earliestFound
             else:
                 # look for earlier data
-                return (self.find_earliest_data_binary(fromDate, testTime + sampleScope, sampleScope, stopScope))
+                return self.find_earliest_data_binary(fromDate, earliestFound + datetime.timedelta(seconds=1))
 
 class FroniusJson:
     def __init__(self, json):
