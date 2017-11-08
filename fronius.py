@@ -278,12 +278,6 @@ class FroniusArchiveJson(FroniusJson):
             deviceID = self.device_ids()[0]
         return list(self.json["Body"]["Data"][deviceID]["Data"].keys())
 
-# FIXME: this name has no place here.
-    @classmethod
-    def timestamp_colname(cls):
-        warnings.warn("class method FroniusArchiveJson::timestamp_colname depricated")
-        return "ts"
-
     def data(self, timestamp_colname = "ts"):
         result = {}
         for deviceID in self.device_ids():
