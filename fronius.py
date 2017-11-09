@@ -6,8 +6,9 @@ import pytz
 import pandas as pd
 
 
+# noinspection SpellCheckingInspection
 class FroniusInverter:
-    'class implementing Fronius Solar API v1'
+    """class implementing Fronius Solar API v1"""
 
     tested_server_versions = ["1.5-4"]
     api_version = 1
