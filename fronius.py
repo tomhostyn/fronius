@@ -52,8 +52,8 @@ class FroniusInverter:
             compatible = False
         if not api_vers['CompatibilityRange'] in FroniusInverter.tested_server_versions:
             warnings.warn(
-                "using api compatibility range newer than last tested (" + str(FroniusInverter.tested_server_versions) + "): " +
-                api_vers['CompatibilityRange'])
+                "using api compatibility range newer than last tested ("
+                + str(FroniusInverter.tested_server_versions) + "): " + api_vers['CompatibilityRange'])
             compatible = False
         return compatible, api_vers
 
@@ -124,31 +124,32 @@ class FroniusInverter:
 
         return returndf
 
-    def get_historical_data_json(self, fromDate, toDate, channels=None):
+    def get_historical_data_json(self, from_date, to_date, channels=None):
 
-        if self.max_query_time < toDate - fromDate:
+        if self.max_query_time < to_date - from_date:
             warnings.warn("time period exceeds maximal query time")
 
         if channels is None:
             channels = self.get_all_channels()
 
-        payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate, "Channel": channels}
+        payload = {"Scope": "System", "StartDate": from_date, "EndDate": to_date, "Channel": channels}
         url = self.base_url + "GetArchiveData.cgi"
         if FroniusInverter.debug:
-            print(url, str(fromDate), "->", str(toDate))
+            print(url, str(from_date), "->", str(to_date))
         r = requests.get(url, params=payload)
         return r.json()
 
-    def get_historical_events_json(self, fromDate, toDate):
-        payload = {"Scope": "System", "StartDate": fromDate, "EndDate": toDate,
+    def get_historical_events_json(self, from_date, to_date):
+        payload = {"Scope": "System", "StartDate": from_date, "EndDate": to_date,
                    "Channel": ["InverterEvents", "InverterErrors"]}
         url = self.base_url + "GetArchiveData.cgi"
         if FroniusInverter.debug:
-            print(url, str(fromDate), "->", str(toDate))
+            print(url, str(from_date), "->", str(to_date))
         r = requests.get(url, params=payload)
         return r.json()
 
-    def _getStartOfEvents(self, eventjson):
+    @staticmethod
+    def _get_start_of_events(eventjson):
         data = eventjson["Body"]["Data"]
         assert (len(data) == 1)
         inverter_id = (list(data.keys())[0])
@@ -171,61 +172,61 @@ class FroniusInverter:
 
         if from_date is None:
             from_date = self.epoch
-        toDate = datetime.datetime.now(pytz.utc)
+        to_date = datetime.datetime.now(pytz.utc)
 
-        assert (from_date < toDate)
+        assert (from_date < to_date)
 
         step = self.max_query_time
         found = False
         result = None
-        while not found and (from_date < toDate):
+        while not found and (from_date < to_date):
             result = self.get_historical_data_json(from_date, from_date + step, [channel])
             if 1 == len(result["Body"]["Data"]):
                 found = True
             from_date += step
 
         if found:
-            return self._getStartOfEvents(result)
+            return self._get_start_of_events(result)
         else:
             return None
 
-    def find_earliest_data_binary(self, fromDate=None, toDate=None):
+    def find_earliest_data_binary(self, from_date=None, to_date=None):
 
         channel = "TimeSpanInSec"
 
-        if fromDate is None:
-            fromDate = self.epoch
-        if toDate is None:
-            toDate = datetime.datetime.now(pytz.utc)
+        if from_date is None:
+            from_date = self.epoch
+        if to_date is None:
+            to_date = datetime.datetime.now(pytz.utc)
 
         sampleScope = self.max_query_time
 
-        # print("find_earliest_data:", str(fromDate), " - ", str(toDate), "[ ", str(toDate - fromDate), " ]")
-        assert (fromDate < toDate)
+        # print("find_earliest_data:", str(from_date), " - ", str(to_date), "[ ", str(to_date - from_date), " ]")
+        assert (from_date < to_date)
 
-        testTimeStart = max(fromDate, fromDate + (toDate - fromDate) / 2 - sampleScope / 2)
-        testTimeEnd = min(toDate, testTimeStart + sampleScope)
+        testTimeStart = max(from_date, from_date + (to_date - from_date) / 2 - sampleScope / 2)
+        testTimeEnd = min(to_date, testTimeStart + sampleScope)
         result = self.get_historical_data_json(testTimeStart, testTimeEnd, [channel])
 
         if 0 == len(result["Body"]["Data"]):
             # no data was found in this interval
 
-            if testTimeEnd == toDate:
+            if testTimeEnd == to_date:
                 # No data found at all!
                 return None
             else:
                 # search the data later than the test time + scope
-                return self.find_earliest_data_binary(testTimeEnd, toDate)
+                return self.find_earliest_data_binary(testTimeEnd, to_date)
         else:
             # data was found.
-            earliestFound = self._getStartOfEvents(result)
+            earliestFound = self._get_start_of_events(result)
             # print("earliest data at : ", earliestFound)
-            if testTimeStart == fromDate:
+            if testTimeStart == from_date:
                 # we found the earliest point
                 return earliestFound
             else:
                 # look for earlier data
-                return self.find_earliest_data_binary(fromDate, earliestFound + datetime.timedelta(seconds=1))
+                return self.find_earliest_data_binary(from_date, earliestFound + datetime.timedelta(seconds=1))
 
 
 class FroniusJson:
