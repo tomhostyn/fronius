@@ -73,29 +73,29 @@ class FroniusInverter:
         r = requests.get(url, params=payload)
         return r.json()
 
-    def get_historical_data(self, fromDate, toDate, channels=None, strict=True):
+    def get_historical_data(self, from_date, to_date, channels=None, strict=True):
 
         returndf = None
         error = 0
 
-        if fromDate.tzinfo is None:
-            warnings.warn("fromDate is not timezone aware. assuming local timezone")
+        if from_date.tzinfo is None:
+            warnings.warn("from_date is not timezone aware. assuming local timezone")
             tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-            fromDate = fromDate.astimezone(tz)
+            from_date = from_date.astimezone(tz)
 
-        if toDate.tzinfo is None:
-            warnings.warn("toDate is not timezone aware. assuming local timezone")
+        if to_date.tzinfo is None:
+            warnings.warn("to_date is not timezone aware. assuming local timezone")
             tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-            toDate = toDate.astimezone(tz)
+            to_date = to_date.astimezone(tz)
 
         # the fronius controller is picky when it comes to local timezones and may throw an error
         # convert to UTC
-        fromDate = fromDate.astimezone(pytz.utc)
-        toDate = toDate.astimezone(pytz.utc)
+        from_date = from_date.astimezone(pytz.utc)
+        to_date = to_date.astimezone(pytz.utc)
 
-        fdate = fromDate
-        while (fdate < toDate) and (error == 0):
-            tdate = min(toDate, fdate + self.max_query_time - datetime.timedelta(seconds=1))
+        fdate = from_date
+        while (fdate < to_date) and (error == 0):
+            tdate = min(to_date, fdate + self.max_query_time - datetime.timedelta(seconds=1))
             jsondata = self.get_historical_data_json(fdate, tdate, channels)
             fdate = tdate
 
@@ -119,8 +119,8 @@ class FroniusInverter:
 
                     if strict:
                         for key, value in returndf.items():
-                            returndf[key] = returndf[key].loc[fromDate <= returndf[key][self.timestamp_colname]]
-                            returndf[key] = returndf[key].loc[returndf[key][self.timestamp_colname] < toDate]
+                            returndf[key] = returndf[key].loc[from_date <= returndf[key][self.timestamp_colname]]
+                            returndf[key] = returndf[key].loc[returndf[key][self.timestamp_colname] < to_date]
 
         return returndf
 
@@ -151,9 +151,11 @@ class FroniusInverter:
     def _getStartOfEvents(self, eventjson):
         data = eventjson["Body"]["Data"]
         assert (len(data) == 1)
-        inverterID = (list(data.keys())[0])
+        inverter_id = (list(data.keys())[0])
 
-        offset = int(list((eventjson["Body"]["Data"])[inverterID]["Data"]["TimeSpanInSec"]["Values"].keys())[0])
+        offset_list_strings = list((eventjson["Body"]["Data"])[inverter_id]["Data"]["TimeSpanInSec"]["Values"].keys())
+        offset_list_ints = map(int, offset_list_strings)
+        offset = min(offset_list_ints)
         seconds = datetime.timedelta(seconds=offset)
 
         datestring = eventjson["Head"]["RequestArguments"]["StartDate"]
@@ -161,26 +163,26 @@ class FroniusInverter:
 
         return date + seconds
 
-    def find_earliest_data(self, fromDate=None):
-        return self.find_earliest_data_binary(fromDate)
+    def find_earliest_data(self, from_date=None):
+        return self.find_earliest_data_binary(from_date)
 
-    def find_earliest_data_linear(self, fromDate=None):
+    def find_earliest_data_linear(self, from_date=None):
         channel = "TimeSpanInSec"
 
-        if fromDate is None:
-            fromDate = self.epoch
+        if from_date is None:
+            from_date = self.epoch
         toDate = datetime.datetime.now(pytz.utc)
 
-        assert (fromDate < toDate)
+        assert (from_date < toDate)
 
         step = self.max_query_time
         found = False
         result = None
-        while not found and (fromDate < toDate):
-            result = self.get_historical_data_json(fromDate, fromDate + step, [channel])
+        while not found and (from_date < toDate):
+            result = self.get_historical_data_json(from_date, from_date + step, [channel])
             if 1 == len(result["Body"]["Data"]):
                 found = True
-            fromDate += step
+            from_date += step
 
         if found:
             return self._getStartOfEvents(result)
